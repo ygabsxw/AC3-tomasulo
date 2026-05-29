@@ -141,29 +141,25 @@ void print_state()
     }
 }
 
+/* ---------------------- */
+/* COMMIT  -> DONE        */
+/* ---------------------- */
+void empty_commits(){
+    for(int i = 0; i < total_instructions; i++){
+        if (instructions[i].stage == STAGE_COMMIT){
+            instructions[i].stage = STAGE_DONE;
+        }
+    }
+}
+
 /* ----------------------------------- */
 /* VERIFICA SE TERMINOU                */
 /* ----------------------------------- */
-int commits;
 
 int finished_program()
 {
-    /* ---------------------- */
-    /* COMMIT                 */
-    /* ---------------------- */
-    
-    commits = 0;
-
-    // no máximo 2 commits
-    for (int i = 0; i < total_instructions && commits < 2; i++)
-    {
-        if (instructions[i].stage == STAGE_COMMIT)
-        {
-            instructions[i].stage = STAGE_DONE;
-
-            commits++;
-        }
-    }
+    //esvaziar estágio de commit (cabe no máximo 2)
+    empty_commits();
 
     for (int i = 0; i < total_instructions; i++)
     {
@@ -186,8 +182,6 @@ void run_pipeline()
 
     while (!finished_program())
     {
-        int i;
-
         printf("\n====================\n");
         printf("CICLO %d\n", cycle);
         printf("====================\n");
@@ -198,7 +192,8 @@ void run_pipeline()
         /* ESTÁGIO DE EXECUCAO    */
         /* ---------------------- */
 
-        for (i = 0; i < total_instructions; i++)
+        int commits = 0;
+        for (int i = 0; i < total_instructions; i++)
         {
             if (instructions[i].stage == STAGE_EX)
             {
@@ -208,7 +203,7 @@ void run_pipeline()
                 if (instructions[i].remaining_ex_cycles <= 0 && commits < 2)
                 {
                     instructions[i].stage = STAGE_COMMIT;
-
+                    commits++;
                     printf("%s DESPACHADA\n", instructions[i].op);
                 }
             }
@@ -221,14 +216,14 @@ void run_pipeline()
         int executing = 0;
 
         // obter total de instruções atualmente decodificadas
-        for (i = 0; i < total_instructions; i++)
+        for (int i = 0; i < total_instructions; i++)
         {
             if (instructions[i].stage == STAGE_EX)
                 executing++;
         }
 
         // se houver espaço, colocar mais instruções em execução (até 2)
-        for (i = 0; i < total_instructions && executing < 2; i++)
+        for (int i = 0; i < total_instructions && executing < 2; i++)
         {
             if (instructions[i].stage == STAGE_DECODE)
             {
@@ -247,14 +242,14 @@ void run_pipeline()
         int decoded = 0;
 
         // obter total de instruções atualmente decodificadas
-        for (i = 0; i < total_instructions; i++)
+        for (int i = 0; i < total_instructions; i++)
         {
             if (instructions[i].stage == STAGE_DECODE)
                 decoded++;
         }
 
         // se houver espaço, decodificar até 2 novas instruções
-        for (i = 0; i < total_instructions && decoded < 2; i++)
+        for (int i = 0; i < total_instructions && decoded < 2; i++)
         {
             if (instructions[i].stage == STAGE_WAIT)
             {
