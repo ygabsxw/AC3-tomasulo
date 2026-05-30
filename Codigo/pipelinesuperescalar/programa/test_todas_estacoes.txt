@@ -1,0 +1,7 @@
+div t1, t3, t2
+lw t4, 0(t1)
+add t5, t1, t2
+sub t6, t4, t3
+mul t7, t1, t4
+lw t8, 8(t4)
+add t9, t7, t8

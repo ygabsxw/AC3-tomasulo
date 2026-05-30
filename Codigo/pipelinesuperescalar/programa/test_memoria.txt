@@ -1,0 +1,4 @@
+add t1, t2, t3
+lw t4, 8(t1)
+sw t4, 12(t2)
+add t5, t4, t3

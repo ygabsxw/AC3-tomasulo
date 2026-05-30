@@ -1,0 +1,4 @@
+add t1, t2, t3
+add t1, t4, t5
+mul t6, t1, t7
+sub t8, t1, t2
