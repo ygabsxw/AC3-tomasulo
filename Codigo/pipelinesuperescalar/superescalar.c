@@ -9,6 +9,16 @@
 #define STAGE_EX 1
 #define STAGE_COMMIT 2
 #define STAGE_DONE 3
+#define NUM_REGISTERS 10
+typedef struct
+{
+    char name[10];
+    int value;
+    char Qi[10];
+
+} Register;
+
+Register registers[NUM_REGISTERS];
 
 typedef struct
 {
@@ -114,6 +124,21 @@ void read_file(char filename[])
 /* MOSTRA ESTADO DAS INSTRUCOES        */
 /* ----------------------------------- */
 
+void print_registers()
+{
+    int i;
+
+    printf("\n-= BANCO DE REGISTRADORES =-\n");
+
+    for (i = 0; i < NUM_REGISTERS; i++)
+    {
+        printf("%s | Valor: %d | Qi: %s\n",
+               registers[i].name,
+               registers[i].value,
+               registers[i].Qi);
+    }
+}
+
 void print_state()
 {
     int i;
@@ -139,6 +164,8 @@ void print_state()
 
         printf("\n");
     }
+
+    print_registers();
 }
 
 /* ---------------------- */
@@ -270,11 +297,132 @@ void run_pipeline()
 }
 
 /* ----------------------------------- */
+/* INICIALIZA REGISTRADORES            */
+/* ----------------------------------- */
+
+void initialize_registers()
+{
+    int i;
+
+    for (i = 0; i < NUM_REGISTERS; i++)
+    {
+        sprintf(registers[i].name, "t%d", i);
+        registers[i].value = i * 10;
+        strcpy(registers[i].Qi, "-");
+    }
+}
+
+/* ----------------------------------------- */
+/* ENCONTRA ÍNDICE DO REGISTRADOR PELO NOME  */
+/* ----------------------------------------- */
+
+int find_register_index(char name[]) 
+{
+    for (int i = 0; i < NUM_REGISTERS; i++)
+    {
+        if (strcmp(registers[i].name, name) == 0)
+            return i;
+    }
+    return -1; // não encontrado
+}
+
+/* ----------------------------------- */
+/* VERIFICA SE REGISTRADOR ESTÁ PRONTO */
+/* ----------------------------------- */
+
+int is_register_ready(char name[]) 
+{
+    int index = find_register_index(name);
+
+    if ((index != -1) && (strcmp(registers[index].Qi, "-") == 0))
+        return 1;
+    else 
+        return 0;
+}
+
+/* ----------------------------------- */
+/* OBTÉM O VALOR DO REGISTRADOR        */
+/* ----------------------------------- */
+
+int get_register_value(char name[]) 
+{
+    int index = find_register_index(name);
+    if (index == -1)
+        return 0; // se não for registrador, retorna 0
+    return registers[index].value;
+}
+
+/* ----------------------------------- */
+/* OBTÉM O QI DO REGISTRADOR           */
+/* ----------------------------------- */
+
+char* get_register_qi(char name[])
+{
+    int index = find_register_index(name);
+    if (index == -1)
+        return "-"; // se não for registrador, retorna "-"
+    return registers[index].Qi;
+}
+
+/* ----------------------------------- */
+/* ALTERA O QI DO REGISTRADOR          */
+/* ----------------------------------- */
+
+void set_register_qi(char name[], char station_name[])
+{
+    int index = find_register_index(name);
+    if (index != -1)
+        strcpy(registers[index].Qi, station_name);
+    
+}
+
+/* ----------------------------------- */
+/* ATUALIZA REGISTRADOR PELO CDB       */
+/* ----------------------------------- */
+
+void update_register_from_cdb(char station_name[], int value) 
+{
+    for (int i = 0; i < NUM_REGISTERS; i++)
+    {
+        if (strcmp(registers[i].Qi, station_name) == 0)
+        {
+            registers[i].value = value;
+            strcpy(registers[i].Qi, "-");
+        }
+    }
+}
+
+/* ----------------------------------- */
 /* MAIN                                */
 /* ----------------------------------- */
 
 int main()
 {
+    initialize_registers();
+
+    /* -------------------------- */
+    /* USANDO APENAS PARA TESTES  */
+    /* -------------------------- */
+    printf("\nTESTE INICIAL DOS REGISTRADORES:\n");
+    print_registers();
+
+    printf("\nTESTE ALTERACAO DO QI:\n");
+    set_register_qi("t1", "Add1");
+    set_register_qi("t4", "Mul1");
+    printf("Indice de t1: %d\n", find_register_index("t1"));
+    printf("t1 esta pronto? %d\n", is_register_ready("t1"));
+    printf("Valor de t2: %d\n", get_register_value("t2"));
+    printf("Qi de t4: %s\n", get_register_qi("t4"));
+    print_registers();
+
+    printf("\nTESTE CDB:\n");
+    update_register_from_cdb("Add1", 999);
+    printf("t1 esta pronto? %d\n", is_register_ready("t1"));
+    print_registers();
+    /* -------------------------- */
+    /* USANDO APENAS PARA TESTES  */
+    /* -------------------------- */
+
     read_file("./programa/test.txt");
 
     run_pipeline();
