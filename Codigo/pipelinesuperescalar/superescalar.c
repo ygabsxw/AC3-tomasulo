@@ -572,10 +572,18 @@ void set_station_operand(ReservationStation *station, char operand, char registe
 
     if (strcmp(register_name, "-") != 0)
     {
+        if (register_name[0] >= '0' && register_name[0] <= '9')
+        {
+            value = atoi(register_name); 
+        }
+
+        else{ 
+            
         if (is_register_ready(register_name))
             value = get_register_value(register_name);
         else
             strcpy(producer, get_register_qi(register_name));
+        }
     }
 
     if (operand == 'j')
