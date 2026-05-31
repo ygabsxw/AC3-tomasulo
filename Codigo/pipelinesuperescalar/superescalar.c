@@ -90,6 +90,7 @@ int reservation_station_operands_ready(char station_name[]);
 int calculate_station_result(char station_name[]);
 void free_reservation_station(char station_name[]);
 void broadcast_cdb(char station_name[], int value);
+int find_reservation_station_index(char station_name[]);
 
 /* ----------------------------------- */
 /* DEFINE QUANTOS CICLOS CADA OP GASTA */
@@ -205,13 +206,62 @@ void print_instruction_status()
 {
     printf("\n-= STATUS DAS INSTRUCOES =-\n");
 
-    printf("Instrucao | RS    | Issue | EX Ini | EX Fim | Write\n");
+    printf("Instrucao              | RS    | Issue | EX Ini | EX Fim | Write\n");
 
     for (int i = 0; i < total_instructions; i++)
     {
-        printf("%-9s | %-5s | %-5d | %-6d | %-6d | %-5d\n",
-               instructions[i].op,
-               instructions[i].station, /* mostra a estacao de reserva utilizada por cada instrucao */
+        char full_instruction[50];
+
+        if (strcmp(instructions[i].rt, "-") == 0)
+        {
+            sprintf(full_instruction, "%s %s, %s",
+                    instructions[i].op,
+                    instructions[i].rd,
+                    instructions[i].rs);
+        }
+        else
+        {
+            sprintf(full_instruction, "%s %s, %s, %s",
+                    instructions[i].op,
+                    instructions[i].rd,
+                    instructions[i].rs,
+                    instructions[i].rt);
+        }
+
+        printf("%-22s | %-5s | %-5d | %-6d | %-6d | %-5d\n",
+               full_instruction,
+               instructions[i].station,
+               instructions[i].issue_cycle,
+               instructions[i].execute_start_cycle,
+               instructions[i].execute_end_cycle,
+               instructions[i].write_result_cycle);
+    }
+
+    printf("Instrucao              | RS    | Issue | EX Ini | EX Fim | Write\n");
+
+    for (int i = 0; i < total_instructions; i++)
+    {
+        char full_instruction[50];
+
+        if (strcmp(instructions[i].rt, "-") == 0)
+        {
+            sprintf(full_instruction, "%s %s, %s",
+                    instructions[i].op,
+                    instructions[i].rd,
+                    instructions[i].rs);
+        }
+        else
+        {
+            sprintf(full_instruction, "%s %s, %s, %s",
+                    instructions[i].op,
+                    instructions[i].rd,
+                    instructions[i].rs,
+                    instructions[i].rt);
+        }
+
+        printf("%-22s | %-5s | %-5d | %-6d | %-6d | %-5d\n",
+               full_instruction,
+               instructions[i].station,
                instructions[i].issue_cycle,
                instructions[i].execute_start_cycle,
                instructions[i].execute_end_cycle,
@@ -304,9 +354,14 @@ void run_pipeline()
         for (int i = 0; i < total_instructions; i++)
         {
             if (instructions[i].stage == STAGE_EX)
-            {
-                instructions[i].remaining_ex_cycles--;
+            {   
+                int station_index = find_reservation_station_index(instructions[i].station);
 
+                if (station_index == -1)
+                    continue;
+
+                instructions[i].remaining_ex_cycles--;
+                reservation_stations[station_index].remaining_ex_cycles = instructions[i].remaining_ex_cycles;
                 // se houver espaço para despachar (max 2)
                 if (instructions[i].remaining_ex_cycles <= 0 && commits < 2)
                 {
@@ -373,7 +428,7 @@ void run_pipeline()
                 int station_index = reserve_station_for_instruction(&instructions[i], i);
 
                 if (station_index == -1)
-                    continue;
+                    break;
 
                 instructions[i].stage = STAGE_DECODE;
 
