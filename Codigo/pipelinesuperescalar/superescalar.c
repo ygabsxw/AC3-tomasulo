@@ -38,6 +38,12 @@ typedef struct
     int stage;        // estado atual da instrucao
     char station[10]; // estacao de reserva usada
 
+    /* ciclos em que a instrucao passou por cada etapa */
+    int issue_cycle;
+    int execute_start_cycle;
+    int execute_end_cycle;
+    int write_result_cycle;
+
 } Instruction;
 
 Instruction instructions[MAX_INSTRUCTIONS];
@@ -164,6 +170,13 @@ void read_file(char filename[])
         inst->remaining_ex_cycles = inst->ex_cycles;
 
         inst->stage = STAGE_WAIT;
+
+        /* ainda nao passou por nenhuma etapa */
+        inst->issue_cycle = -1;
+        inst->execute_start_cycle = -1;
+        inst->execute_end_cycle = -1;
+        inst->write_result_cycle = -1;
+
         total_instructions++;
     }
     fclose(file);
@@ -185,6 +198,24 @@ void print_registers()
                registers[i].name,
                registers[i].value,
                registers[i].Qi);
+    }
+}
+
+void print_instruction_status()
+{
+    printf("\n-= STATUS DAS INSTRUCOES =-\n");
+
+    printf("Instrucao | RS    | Issue | EX Ini | EX Fim | Write\n");
+
+    for (int i = 0; i < total_instructions; i++)
+    {
+        printf("%-9s | %-5s | %-5d | %-6d | %-6d | %-5d\n",
+               instructions[i].op,
+               instructions[i].station, /* mostra a estacao de reserva utilizada por cada instrucao */
+               instructions[i].issue_cycle,
+               instructions[i].execute_start_cycle,
+               instructions[i].execute_end_cycle,
+               instructions[i].write_result_cycle);
     }
 }
 
@@ -214,6 +245,7 @@ void print_state()
         printf("\n");
     }
 
+    print_instruction_status();
     print_reservation_stations();
     print_registers();
 }
@@ -278,6 +310,12 @@ void run_pipeline()
                 // se houver espaço para despachar (max 2)
                 if (instructions[i].remaining_ex_cycles <= 0 && commits < 2)
                 {
+                    /* registra quando a execucao terminou */
+                    instructions[i].execute_end_cycle = cycle;
+
+                    /* registra quando o resultado foi escrito */
+                    instructions[i].write_result_cycle = cycle;
+                    
                     int result = calculate_station_result(instructions[i].station);
                     broadcast_cdb(instructions[i].station, result);
                     free_reservation_station(instructions[i].station);
@@ -312,6 +350,9 @@ void run_pipeline()
             {
                 instructions[i].stage = STAGE_EX;
 
+                /* registra quando a instrucao iniciou execucao */
+                instructions[i].execute_start_cycle = cycle;
+
                 printf("%s -> iniciou EX\n", instructions[i].op);
 
                 executing++;
@@ -335,6 +376,9 @@ void run_pipeline()
                     continue;
 
                 instructions[i].stage = STAGE_DECODE;
+
+                /* registra o ciclo em que a instrucao entrou no sistema */
+                instructions[i].issue_cycle = cycle;
 
                 printf("%s -> alocada na estacao %s\n",
                        instructions[i].op,
@@ -778,13 +822,22 @@ void print_reservation_stations()
 {
     printf("\n-= ESTACOES DE RESERVA =-\n");
     // Padrão do slide 06, pag 36
-    printf("Nome  | Busy | Op  | Vj   | Vk   | Qj    | Qk    | A\n");
+    printf("Nome  | Busy | Op  | Vj   | Vk   | Qj    | Qk    | A | EX | Status\n");
 
     for (int i = 0; i < NUM_RESERVATION_STATIONS; i++)
     {
         ReservationStation *station = &reservation_stations[i];
 
-        printf("%-5s | %-4s | %-3s | %-4d | %-4d | %-5s | %-5s | %d\n",
+        char status[20];
+
+        if (strcmp(station->Qj, "-") != 0 || strcmp(station->Qk, "-") != 0)
+            strcpy(status, "Esperando");
+        else if (station->busy)
+            strcpy(status, "Pronta");
+        else
+            strcpy(status, "-");
+
+        printf("%-5s | %-4s | %-3s | %-4d | %-4d | %-5s | %-5s | %d | %d | %s\n",
                station->name,
                station->busy ? "sim" : "nao",
                station->busy ? station->op : "-",
@@ -792,7 +845,9 @@ void print_reservation_stations()
                station->Vk,
                station->Qj,
                station->Qk,
-               station->offset);
+               station->offset,
+               station->remaining_ex_cycles,
+               status);
     }
 }
 
