@@ -518,7 +518,8 @@ int instruction_writes_register(char op[])
 int station_accepts_operation(ReservationStationType type, char op[])
 {
     if (type == RS_ADD)
-        return strcmp(op, "add") == 0 || strcmp(op, "sub") == 0;
+        return strcmp(op, "add") == 0 || strcmp(op, "sub") == 0
+        || strcmp(op,"or") == 0 || strcmp(op, "and") == 0;
 
     if (type == RS_MULT)
         return strcmp(op, "mul") == 0 || strcmp(op, "div") == 0;
@@ -690,6 +691,12 @@ int calculate_station_result(char station_name[])
 
     if (strcmp(station->op, "sub") == 0)
         return station->Vj - station->Vk;
+
+    if(strcmp(station->op, "or") == 0)
+        return station->Vj | station->Vk;
+
+    if(strcmp(station->op, "and") == 0)
+        return station->Vj & station->Vk;
 
     if (strcmp(station->op, "mul") == 0)
         return station->Vj * station->Vk;
